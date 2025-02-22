@@ -57,19 +57,25 @@ const parse_handwriting = (recipeName: string): string | null => {
   recipeName = recipeName.replace(/^\s/, "");
   recipeName = recipeName.replace(/\s$/, "");
 
-  recipeName = recipeName.toLowerCase();
-
-  let words = recipeName.split(" ");
-  let temp: string[] = [];
-  for (const word of words) {
-    const capital = word.charAt(0).toUpperCase();
-    temp.push(capital + word.slice(1));
-  }
-  recipeName = temp.join(" ");
-  
   if (recipeName.length <= 0) return null;
 
+  recipeName = capitaliseWords(recipeName);
+
   return recipeName;
+}
+
+const capitaliseWords = (chosenString: string) : string => {
+  chosenString = chosenString.toLowerCase();
+  let words = chosenString.split(" ");
+  let arr: string[] = [];
+
+  for (const word of words) {
+    const capital = word.charAt(0).toUpperCase();
+    arr.push(capital + word.slice(1));
+  }
+
+  chosenString = arr.join(" ");
+  return chosenString;
 }
 
 // [TASK 2] ====================================================================
@@ -79,29 +85,28 @@ app.post("/entry", (req:Request, res:Response) => {
     if (addRecipeEntry(req.body)) {
       res.json({});
       return;
-    } else {
-      res.status(400).send("");
-      return;
     }
-  } else if (req.body.type === "ingredient") {
+    res.status(400).send("");
+    return;
+  } 
+  
+  if (req.body.type === "ingredient") {
     if (addIngredientEntry(req.body)) {
       res.json({});
       return;
-    } else {
-      res.status(400).send("");
-      return;
     }
-  } else {
     res.status(400).send("");
     return;
   }
+
+  res.status(400).send("");
+  return;
 });
 
 const addRecipeEntry = (entry: recipe): boolean => {
   // entry names must be unique
-  if (!isUnique(entry.name)) {
-    return false;
-  }
+  if (!isUnique(entry.name)) return false;
+
   // Recipe requiredItems can only have one element per name.
   const temp = [...entry.requiredItems];
   if (temp.filter((element, index) => index !== temp.indexOf(element)).length > 0) {
@@ -111,32 +116,35 @@ const addRecipeEntry = (entry: recipe): boolean => {
   return true;
 }
 
-const addIngredientEntry = (entry: ingredient): boolean => {
-  if (entry.cookTime < 0) { // cookTime can only be greater than or equal to 0
-    return false;
-  // entry names must be unique
-  } else if (!isUnique(entry.name)) {
+const isUnique = (entryName: string): boolean => {
+  if (cookbook.ingredients.find((ingredient) => 
+    ingredient.name === entryName) !== undefined
+  ) {
     return false;
   }
-  cookbook.ingredients.push(entry);
-  return true; 
-}
-
-const isUnique = (entryName: string): boolean => {
-  if (cookbook.ingredients.find((ingredient) => ingredient.name === entryName) !== undefined) {
-    return false;
-  } else if (cookbook.recipes.find((recipe) => recipe.name === entryName) !== undefined) {
+  
+  if (cookbook.recipes.find((recipe) => 
+    recipe.name === entryName) !== undefined
+  ) {
     return false;
   }
 
   return true;
 }
 
+const addIngredientEntry = (entry: ingredient): boolean => {
+  // cookTime can only be greater than or equal to 0 & entry names must be unique
+  if (entry.cookTime < 0 || !isUnique(entry.name)) return false;
+
+  cookbook.ingredients.push(entry);
+  return true; 
+}
+
 // [TASK 3] ====================================================================
 // Endpoint that returns a summary of a recipe that corresponds to a query name
 app.get("/summary", (req:Request, res:Request) => {
-  // TODO: implement me
-  res.status(500).send("not yet implemented!")
+  res.status(500).send("not yet implemented!");
+  
 
 });
 
