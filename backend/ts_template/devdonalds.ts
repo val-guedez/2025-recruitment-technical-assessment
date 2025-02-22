@@ -2,8 +2,8 @@ import express, { Request, Response } from "express";
 
 // ==== Type Definitions, feel free to add or modify ==========================
 interface cookbookEntry {
-  name: string;
   type: string;
+  name: string;
 }
 
 interface requiredItem {
@@ -19,6 +19,11 @@ interface ingredient extends cookbookEntry {
   cookTime: number;
 }
 
+interface cookbook {
+  recipes: recipe[];
+  ingredients: ingredient[];
+}
+
 // =============================================================================
 // ==== HTTP Endpoint Stubs ====================================================
 // =============================================================================
@@ -26,7 +31,7 @@ const app = express();
 app.use(express.json());
 
 // Store your recipes here!
-const cookbook: any = null;
+const cookbook: cookbook = {recipes: [], ingredients: []};
 
 // Task 1 helper (don't touch)
 app.post("/parse", (req:Request, res:Response) => {
@@ -62,20 +67,70 @@ const parse_handwriting = (recipeName: string): string | null => {
   }
   recipeName = temp.join(" ");
   
-  if (recipeName.length <= 0) {
-    return null;
-  } else {
-    return recipeName;
-  }
+  if (recipeName.length <= 0) return null;
+
+  return recipeName;
 }
 
 // [TASK 2] ====================================================================
 // Endpoint that adds a CookbookEntry to your magical cookbook
-app.post("/entry", (req:Request, res:Response) => {
-  // TODO: implement me
-  res.status(500).send("not yet implemented!")
-
+app.post("/entry", (req:Request, res:Response) => {    
+  if (req.body.type === "recipe") {
+    if (addRecipeEntry(req.body)) {
+      res.json({});
+      return;
+    } else {
+      res.status(400).send("");
+      return;
+    }
+  } else if (req.body.type === "ingredient") {
+    if (addIngredientEntry(req.body)) {
+      res.json({});
+      return;
+    } else {
+      res.status(400).send("");
+      return;
+    }
+  } else {
+    res.status(400).send("");
+    return;
+  }
 });
+
+const addRecipeEntry = (entry: recipe): boolean => {
+  // entry names must be unique
+  if (!isUnique(entry.name)) {
+    return false;
+  }
+  // Recipe requiredItems can only have one element per name.
+  const temp = [...entry.requiredItems];
+  if (temp.filter((element, index) => index !== temp.indexOf(element)).length > 0) {
+    return false;
+  }
+  cookbook.recipes.push(entry);
+  return true;
+}
+
+const addIngredientEntry = (entry: ingredient): boolean => {
+  if (entry.cookTime < 0) { // cookTime can only be greater than or equal to 0
+    return false;
+  // entry names must be unique
+  } else if (!isUnique(entry.name)) {
+    return false;
+  }
+  cookbook.ingredients.push(entry);
+  return true; 
+}
+
+const isUnique = (entryName: string): boolean => {
+  if (cookbook.ingredients.find((ingredient) => ingredient.name === entryName) !== undefined) {
+    return false;
+  } else if (cookbook.recipes.find((recipe) => recipe.name === entryName) !== undefined) {
+    return false;
+  }
+
+  return true;
+}
 
 // [TASK 3] ====================================================================
 // Endpoint that returns a summary of a recipe that corresponds to a query name

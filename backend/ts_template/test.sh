@@ -31,8 +31,10 @@ kill_previous_processes
 trap 'kill_server' EXIT ERR
 echo "== Starting server =="
 
+# npm i > /dev/null 2>&1
+# npm start > /dev/null 2>&1 &
 npm i > /dev/null 2>&1
-npm start > /dev/null 2>&1 &
+npm start &
 SERVER_PID=$!
 
 # Wait for the server to be up
