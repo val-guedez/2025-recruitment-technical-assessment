@@ -24,6 +24,17 @@ interface cookbook {
   ingredients: ingredient[];
 }
 
+interface recipeSummary {
+  name: string;
+  cookTime: number;
+  ingredients: requiredItem[];
+}
+
+enum Item {
+  Ingredient = 1,
+  Recipe,
+}
+
 // =============================================================================
 // ==== HTTP Endpoint Stubs ====================================================
 // =============================================================================
@@ -143,10 +154,61 @@ const addIngredientEntry = (entry: ingredient): boolean => {
 // [TASK 3] ====================================================================
 // Endpoint that returns a summary of a recipe that corresponds to a query name
 app.get("/summary", (req:Request, res:Request) => {
-  res.status(500).send("not yet implemented!");
+  const recipeName = req.query.name as string;
   
+  const recipe = cookbook.recipes.find((recipe) => recipe.name === recipeName);
 
+  // Recipe not found
+  if (recipe === undefined) {
+    res.status(400).send("");
+  }
+
+  let recipeSummary: recipeSummary = {name: recipeName,
+    cookTime: 0,
+    ingredients: []
+  };
+
+  recipeSummary = summariseRecipe(recipe, recipeSummary);
+
+  if (recipeSummary === undefined) {
+    res.status(400).send("");
+    return;
+  }
+  
+  res.json(recipeSummary);
 });
+
+const summariseRecipe = (recipe: recipe, recipeSummary: recipeSummary): recipeSummary | undefined => {
+  for (const requiredItem of recipe.requiredItems) {
+    // Ingredient
+    const cookbookIngredient = cookbook.ingredients.find((ingredient) => ingredient.name === requiredItem.name);
+    if (cookbookIngredient !== undefined) {
+      recipeSummary.cookTime += cookbookIngredient.cookTime;
+
+      // Search recipeSummary if ingredient has already been added, increment quantity property
+      const ingredientIndex = recipeSummary.ingredients.findIndex((ingredient) => ingredient.name === cookbookIngredient.name);
+      if (ingredientIndex !== -1) {
+        recipeSummary.ingredients[ingredientIndex].quantity++;
+      } else {
+        recipeSummary.ingredients.push({name: cookbookIngredient.name, quantity: 1});
+      }
+      continue;
+    }
+
+    // Recipe
+    const cookbookRecipe = cookbook.recipes.find((bookRecipe) => bookRecipe.name === requiredItem.name);
+    if (cookbookRecipe !== undefined) {
+      // Recursion
+      recipeSummary = summariseRecipe(cookbookRecipe, recipeSummary);
+      if (recipeSummary === undefined) return undefined;
+      continue;
+    }
+
+    // Not in cookbook
+    return undefined;
+  }
+  return recipeSummary;
+}
 
 // =============================================================================
 // ==== DO NOT TOUCH ===========================================================
