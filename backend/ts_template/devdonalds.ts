@@ -158,11 +158,12 @@ app.get("/summary", (req:Request, res:Request) => {
   
   const recipe = cookbook.recipes.find((recipe) => recipe.name === recipeName);
 
-  // Recipe not found
+  // Recipe not found in cookbook / is an ingredient
   if (recipe === undefined) {
     res.status(400).send("");
   }
 
+  // Initialising recipe summary
   let recipeSummary: recipeSummary = {name: recipeName,
     cookTime: 0,
     ingredients: []
@@ -181,16 +182,17 @@ app.get("/summary", (req:Request, res:Request) => {
 const summariseRecipe = (recipe: recipe, recipeSummary: recipeSummary): recipeSummary | undefined => {
   for (const requiredItem of recipe.requiredItems) {
     // Ingredient
-    const cookbookIngredient = cookbook.ingredients.find((ingredient) => ingredient.name === requiredItem.name);
-    if (cookbookIngredient !== undefined) {
-      recipeSummary.cookTime += cookbookIngredient.cookTime;
+    const requiredIngredient = cookbook.ingredients.find((ingredient) => ingredient.name === requiredItem.name);
+    // Required item is an ingredient
+    if (requiredIngredient !== undefined) {
+      recipeSummary.cookTime += requiredIngredient.cookTime; // Update cooking time
 
       // Search recipeSummary if ingredient has already been added, increment quantity property
-      const ingredientIndex = recipeSummary.ingredients.findIndex((ingredient) => ingredient.name === cookbookIngredient.name);
-      if (ingredientIndex !== -1) {
-        recipeSummary.ingredients[ingredientIndex].quantity++;
+      const summaryIndex = recipeSummary.ingredients.findIndex((ingredient) => ingredient.name === requiredIngredient.name);
+      if (summaryIndex !== -1) {
+        recipeSummary.ingredients[summaryIndex].quantity += requiredItem.quantity;
       } else {
-        recipeSummary.ingredients.push({name: cookbookIngredient.name, quantity: 1});
+        recipeSummary.ingredients.push({name: requiredIngredient.name, quantity: requiredItem.quantity});
       }
       continue;
     }
