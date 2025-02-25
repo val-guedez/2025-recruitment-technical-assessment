@@ -93,38 +93,40 @@ const capitaliseWords = (chosenString: string) : string => {
 // Endpoint that adds a CookbookEntry to your magical cookbook
 app.post("/entry", (req:Request, res:Response) => {    
   if (req.body.type === "recipe") {
-    if (addRecipeEntry(req.body)) {
-      res.json({});
+    try {
+      addRecipeEntry(req.body);
+    } catch (error) {
+      res.status(400).json({ error: error.name });
       return;
     }
-    res.status(400).send("");
+    res.json({}); 
     return;
   } 
   
   if (req.body.type === "ingredient") {
-    if (addIngredientEntry(req.body)) {
-      res.json({});
+    try {
+      addIngredientEntry(req.body);
+    } catch (error) {
+      res.status(400).json({ error: error.name });
       return;
     }
-    res.status(400).send("");
+    res.json({});
     return;
   }
 
-  res.status(400).send("");
+  res.status(400).json({ Error: "Invalid type" });
   return;
 });
 
-const addRecipeEntry = (entry: recipe): boolean => {
-  // entry names must be unique
-  if (!isUnique(entry.name)) return false;
+const addRecipeEntry = (entry: recipe) => {
+  if (!isUnique(entry.name)) throw new Error("Entry name must be unique");
 
   // Recipe requiredItems can only have one element per name.
   const temp = [...entry.requiredItems];
   if (temp.filter((element, index) => index !== temp.indexOf(element)).length > 0) {
-    return false;
+    throw new Error("requiredItems can have only one element per name");
   }
   cookbook.recipes.push(entry);
-  return true;
 }
 
 const isUnique = (entryName: string): boolean => {
@@ -143,24 +145,24 @@ const isUnique = (entryName: string): boolean => {
   return true;
 }
 
-const addIngredientEntry = (entry: ingredient): boolean => {
+const addIngredientEntry = (entry: ingredient) => {
   // cookTime can only be greater than or equal to 0 & entry names must be unique
-  if (entry.cookTime < 0 || !isUnique(entry.name)) return false;
+  if (entry.cookTime < 0) throw new Error("Cooktime must be >= 0");
+
+  if (!isUnique(entry.name)) throw new Error("Entry name must be unique");
 
   cookbook.ingredients.push(entry);
-  return true; 
 }
 
 // [TASK 3] ====================================================================
 // Endpoint that returns a summary of a recipe that corresponds to a query name
 app.get("/summary", (req:Request, res:Request) => {
   const recipeName = req.query.name as string;
-  
   const recipe = cookbook.recipes.find((recipe) => recipe.name === recipeName);
 
-  // Recipe not found in cookbook / is an ingredient
   if (recipe === undefined) {
-    res.status(400).send("");
+    res.status(400).json({ error: "Recipe not found in cookbook / is an ingredient / cookbook is empty" });
+    return;
   }
 
   // Initialising recipe summary
@@ -169,17 +171,17 @@ app.get("/summary", (req:Request, res:Request) => {
     ingredients: []
   };
 
-  recipeSummary = summariseRecipe(recipe, recipeSummary);
-
-  if (recipeSummary === undefined) {
-    res.status(400).send("");
+  try {
+    summariseRecipe(recipe, recipeSummary);
+  } catch (error) {
+    res.status(400).json({error: error.message});
     return;
   }
   
   res.json(recipeSummary);
 });
 
-const summariseRecipe = (recipe: recipe, recipeSummary: recipeSummary): recipeSummary | undefined => {
+const summariseRecipe = (recipe: recipe, recipeSummary: recipeSummary) => {
   for (const requiredItem of recipe.requiredItems) {
     // Ingredient
     const requiredIngredient = cookbook.ingredients.find((ingredient) => ingredient.name === requiredItem.name);
@@ -198,18 +200,16 @@ const summariseRecipe = (recipe: recipe, recipeSummary: recipeSummary): recipeSu
     }
 
     // Recipe
-    const cookbookRecipe = cookbook.recipes.find((bookRecipe) => bookRecipe.name === requiredItem.name);
-    if (cookbookRecipe !== undefined) {
+    const requiredRecipe = cookbook.recipes.find((bookRecipe) => bookRecipe.name === requiredItem.name);
+    if (requiredRecipe !== undefined) {
       // Recursion
-      recipeSummary = summariseRecipe(cookbookRecipe, recipeSummary);
-      if (recipeSummary === undefined) return undefined;
+      summariseRecipe(requiredRecipe, recipeSummary);
       continue;
     }
 
     // Not in cookbook
-    return undefined;
+    throw new Error("This ingredient or recipe is not in the cookbook");
   }
-  return recipeSummary;
 }
 
 // =============================================================================
