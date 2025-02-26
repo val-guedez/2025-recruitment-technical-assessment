@@ -117,20 +117,12 @@ const addRecipeEntry = (entry: recipe) => {
   if (!isUnique(entry.name)) throw new Error("Entry name must be unique");
 
   for (const item of entry.requiredItems) {
-    for (const item2 of entry.requiredItems) {
-      if (item.name === item2.name && entry.requiredItems.indexOf(item) !== entry.requiredItems.indexOf(item2)) {
+    for (const potentialDup of entry.requiredItems) {
+      if (item.name === potentialDup.name && entry.requiredItems.indexOf(item) !== entry.requiredItems.indexOf(potentialDup)) {
         throw new Error("requiredItems can have only one element per name");
       }
     }
   }
-
-  // // Recipe requiredItems can only have one element per name.
-  // // need to compare the name field...not the whole object
-  // if (entry.requiredItems.filter((element, index) =>
-  //   index !== entry.requiredItems.indexOf(element)).length > 0
-  // ) {
-  //   throw new Error("requiredItems can have only one element per name");
-  // }
   cookbook.recipes.push(entry);
 }
 
@@ -166,6 +158,7 @@ app.get("/summary", (req:Request, res:Request) => {
   const recipe = cookbook.recipes.find((recipe) => recipe.name === recipeName);
 
   if (recipe === undefined) {
+    console.log("undefined..");
     res.status(400).json({ error: "Recipe not found in cookbook / is an ingredient / cookbook is empty" });
     return;
   }
@@ -177,22 +170,25 @@ app.get("/summary", (req:Request, res:Request) => {
   };
 
   try {
-    summariseRecipe(recipe, recipeSummary);
+    summariseRecipe(recipe, recipeSummary, 1);
   } catch (error) {
     res.status(400).json({ error: error.message });
     return;
   }
   
+  console.log(recipeSummary);
   res.json(recipeSummary);
 });
 
-const summariseRecipe = (recipe: recipe, recipeSummary: recipeSummary) => {
+const summariseRecipe = (recipe: recipe, recipeSummary: recipeSummary, recipeQuantity: number) => {
   for (const requiredItem of recipe.requiredItems) {
     // Ingredient
     const requiredIngredient = cookbook.ingredients.find((ingredient) => ingredient.name === requiredItem.name);
     // Required item is an ingredient
     if (requiredIngredient !== undefined) {
-      recipeSummary.cookTime += requiredIngredient.cookTime; // Update cooking time
+      console.log("Ingredient is " + requiredItem);
+      if (requiredItem.quantity <= 0) throw new Error("Quantity of requiredItem must be greater than 0");
+      recipeSummary.cookTime += requiredIngredient.cookTime * requiredItem.quantity * recipeQuantity; // Update cooking time
 
       // Search recipeSummary if ingredient has already been added, increment quantity property
       const summaryIndex = recipeSummary.ingredients.findIndex((ingredient) => ingredient.name === requiredIngredient.name);
@@ -207,10 +203,13 @@ const summariseRecipe = (recipe: recipe, recipeSummary: recipeSummary) => {
     // Recipe
     const requiredRecipe = cookbook.recipes.find((bookRecipe) => bookRecipe.name === requiredItem.name);
     if (requiredRecipe !== undefined) {
-      summariseRecipe(requiredRecipe, recipeSummary);
+      console.log("Recipe is ");
+      summariseRecipe(requiredRecipe, recipeSummary, requiredItem.quantity);
       continue;
     }
 
+    console.log("ERm wth");
+    console.log(requiredItem);
     throw new Error("This ingredient or recipe is not in the cookbook");
   }
 }
