@@ -193,9 +193,9 @@ const summariseRecipe = (recipe: recipe, recipeSummary: recipeSummary, recipeQua
       // Search recipeSummary if ingredient has already been added, increment quantity property
       const summaryIndex = recipeSummary.ingredients.findIndex((ingredient) => ingredient.name === requiredIngredient.name);
       if (summaryIndex !== -1) {
-        recipeSummary.ingredients[summaryIndex].quantity += requiredItem.quantity;
+        recipeSummary.ingredients[summaryIndex].quantity += requiredItem.quantity * recipeQuantity;
       } else {
-        recipeSummary.ingredients.push({ name: requiredIngredient.name, quantity: requiredItem.quantity });
+        recipeSummary.ingredients.push({ name: requiredIngredient.name, quantity: requiredItem.quantity * recipeQuantity });
       }
       continue;
     }
@@ -203,7 +203,7 @@ const summariseRecipe = (recipe: recipe, recipeSummary: recipeSummary, recipeQua
     // Recipe
     const requiredRecipe = cookbook.recipes.find((bookRecipe) => bookRecipe.name === requiredItem.name);
     if (requiredRecipe !== undefined) {
-      console.log("Recipe is ");
+      console.log("Recipe is " + requiredItem.name);
       summariseRecipe(requiredRecipe, recipeSummary, requiredItem.quantity);
       continue;
     }
