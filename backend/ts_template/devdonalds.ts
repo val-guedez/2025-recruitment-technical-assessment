@@ -30,11 +30,6 @@ interface recipeSummary {
   ingredients: requiredItem[];
 }
 
-enum Item {
-  Ingredient = 1,
-  Recipe,
-}
-
 // =============================================================================
 // ==== HTTP Endpoint Stubs ====================================================
 // =============================================================================
@@ -42,7 +37,7 @@ const app = express();
 app.use(express.json());
 
 // Store your recipes here!
-const cookbook: cookbook = {recipes: [], ingredients: []};
+const cookbook: cookbook = { recipes: [], ingredients: [] };
 
 // Task 1 helper (don't touch)
 app.post("/parse", (req:Request, res:Response) => {
@@ -114,18 +109,28 @@ app.post("/entry", (req:Request, res:Response) => {
     return;
   }
 
-  res.status(400).json({ Error: "Invalid type" });
+  res.status(400).json({ error: "Invalid type" });
   return;
 });
 
 const addRecipeEntry = (entry: recipe) => {
   if (!isUnique(entry.name)) throw new Error("Entry name must be unique");
 
-  // Recipe requiredItems can only have one element per name.
-  const temp = [...entry.requiredItems];
-  if (temp.filter((element, index) => index !== temp.indexOf(element)).length > 0) {
-    throw new Error("requiredItems can have only one element per name");
+  for (const item of entry.requiredItems) {
+    for (const item2 of entry.requiredItems) {
+      if (item.name === item2.name && entry.requiredItems.indexOf(item) !== entry.requiredItems.indexOf(item2)) {
+        throw new Error("requiredItems can have only one element per name");
+      }
+    }
   }
+
+  // // Recipe requiredItems can only have one element per name.
+  // // need to compare the name field...not the whole object
+  // if (entry.requiredItems.filter((element, index) =>
+  //   index !== entry.requiredItems.indexOf(element)).length > 0
+  // ) {
+  //   throw new Error("requiredItems can have only one element per name");
+  // }
   cookbook.recipes.push(entry);
 }
 
@@ -174,7 +179,7 @@ app.get("/summary", (req:Request, res:Request) => {
   try {
     summariseRecipe(recipe, recipeSummary);
   } catch (error) {
-    res.status(400).json({error: error.message});
+    res.status(400).json({ error: error.message });
     return;
   }
   
@@ -194,7 +199,7 @@ const summariseRecipe = (recipe: recipe, recipeSummary: recipeSummary) => {
       if (summaryIndex !== -1) {
         recipeSummary.ingredients[summaryIndex].quantity += requiredItem.quantity;
       } else {
-        recipeSummary.ingredients.push({name: requiredIngredient.name, quantity: requiredItem.quantity});
+        recipeSummary.ingredients.push({ name: requiredIngredient.name, quantity: requiredItem.quantity });
       }
       continue;
     }
@@ -202,12 +207,10 @@ const summariseRecipe = (recipe: recipe, recipeSummary: recipeSummary) => {
     // Recipe
     const requiredRecipe = cookbook.recipes.find((bookRecipe) => bookRecipe.name === requiredItem.name);
     if (requiredRecipe !== undefined) {
-      // Recursion
       summariseRecipe(requiredRecipe, recipeSummary);
       continue;
     }
 
-    // Not in cookbook
     throw new Error("This ingredient or recipe is not in the cookbook");
   }
 }
