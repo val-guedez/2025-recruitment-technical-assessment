@@ -70,6 +70,7 @@ const parse_handwriting = (recipeName: string): string | null => {
   return recipeName;
 }
 
+// Capitalises the first letter of each word in the given string
 const capitaliseWords = (chosenString: string) : string => {
   chosenString = chosenString.toLowerCase();
   let words = chosenString.split(" ");
@@ -97,16 +98,18 @@ app.post("/entry", (req:Request, res:Response) => {
   return;
 });
 
+// Attempts to add requested cookbook entry, calling relevant helper
 const addCookbookEntry = (entryType: string, req: Request) => {
   if (entryType === "recipe") {
     addRecipeEntry(req.body);
   } else if (entryType === "ingredient") {
     addIngredientEntry(req.body);
   } else {
-    throw new Error("Invalid type");
+    throw new Error("Type must be recipe or ingredient");
   }
 }
 
+// Attempts to add given recipe to cookbook
 const addRecipeEntry = (entry: recipe) => {
   if (!isUnique(entry.name)) throw new Error("Entry name must be unique");
 
@@ -122,6 +125,7 @@ const addRecipeEntry = (entry: recipe) => {
   cookbook.recipes.push(entry);
 }
 
+// Returns true if given entry name is not in cookbook, false otherwise
 const isUnique = (entryName: string): boolean => {
   if (cookbook.ingredients.find((ingredient) => ingredient.name === entryName) !== undefined) {
     return false;
@@ -136,6 +140,7 @@ const isUnique = (entryName: string): boolean => {
   return true;
 }
 
+// Attempts to add given ingredient to cookbook
 const addIngredientEntry = (entry: ingredient) => {
   if (entry.cookTime < 0) throw new Error("Cooktime must be >= 0");
 
@@ -152,7 +157,7 @@ app.get("/summary", (req:Request, res:Request) => {
 
   if (recipe === undefined) {
     res.status(400).json(
-      { error: "Recipe not found in cookbook / is an ingredient / cookbook is empty" }
+      { error: "Recipe not found in cookbook / Not a recipe / Cookbook is empty" }
     );
     return;
   }
@@ -172,6 +177,7 @@ app.get("/summary", (req:Request, res:Request) => {
   res.json(recipeSummary);
 });
 
+// Attempts to fill given recipe summary from the relevant given recipe
 const summariseRecipe = (recipe: recipe, recipeSummary: recipeSummary, recipeQuantity: number) => {
   for (const requiredItem of recipe.requiredItems) {
     const requiredIngredient = cookbook.ingredients.find(
@@ -196,7 +202,11 @@ const summariseRecipe = (recipe: recipe, recipeSummary: recipeSummary, recipeQua
   }
 }
 
-const addIngredientSummary = (ingredientQuantity: number, requiredIngredient: ingredient, recipeSummary: recipeSummary, recipeQuantity: number) => {
+// Attempts to add or modify the given required ingredient entry to the recipe summary
+const addIngredientSummary = (
+  ingredientQuantity: number, requiredIngredient: ingredient,
+  recipeSummary: recipeSummary, recipeQuantity: number
+) => {
   if (ingredientQuantity <= 0) {
     throw new Error("Quantity of requiredItem must be greater than 0");
   }
